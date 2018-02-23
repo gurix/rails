@@ -17,6 +17,14 @@ module ActionController
         sse.close
       end
 
+      def huge_sse
+        response.headers["Content-Type"] = "text/event-stream"
+        sse = SSE.new(response.stream)
+        100.times {|i| sse.write(something: "Number #{i}")}
+      ensure
+        sse.close
+      end
+
       def sse_with_event
         sse = SSE.new(response.stream, event: "send-name")
         sse.write("{\"name\":\"John\"}")
@@ -61,6 +69,13 @@ module ActionController
       wait_for_response_stream_close
       assert_match(/data: {\"name\":\"John\"}/, response.body)
       assert_match(/data: {\"name\":\"Ryan\"}/, response.body)
+    end
+
+    def test_huge_sse
+      get :huge_sse
+
+      wait_for_response_stream_close
+      100.times {|i| assert_match(/data: {\"something\":\"Number #{i}\"}/, response.body) }
     end
 
     def test_sse_with_event_name
